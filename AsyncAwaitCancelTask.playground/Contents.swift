@@ -2,7 +2,7 @@ import XCTest
 
 final class Tests: XCTestCase {
     
-    func test_startTask_cancel_flowShouldContinue() throws {
+    func test_startTask_cancelTask_instanceShouldBeDeallocated() throws {
         let asyncFunctionStartedExp = expectation(description: "wait for start of async function")
         let testDelayExp = expectation(description: "wait for completion")
         weak var weakSpy: ProcessSpy?
