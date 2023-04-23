@@ -3,7 +3,6 @@ import XCTest
 final class Tests: XCTestCase {
     
     func test_startTask_cancelTask_instanceShouldBeDeallocated() throws {
-        let asyncFunctionStartedExp = expectation(description: "wait for start of async function")
         let testDelayExp = expectation(description: "wait for completion")
         weak var weakSpy: ProcessSpy?
         
@@ -15,17 +14,15 @@ final class Tests: XCTestCase {
                 return try await spy!.testAsyncFunction()
             }
             
-            spy?.onStarted = {
+            DispatchQueue.global().asyncAfter(deadline: .now() + 0.2, execute: {
+                print("cancel task")
                 task.cancel()
-                asyncFunctionStartedExp.fulfill()
-            }
-            
-            wait(for: [asyncFunctionStartedExp], timeout: 1.0)
-            spy = nil
+                spy = nil
+            })
         }
         
         // a little delay just to be sure....
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: {
             testDelayExp.fulfill()
         })
         wait(for: [testDelayExp], timeout: 1.0)
@@ -33,18 +30,13 @@ final class Tests: XCTestCase {
         XCTAssertNil(weakSpy, "expected `weakSpy` to have been deallocated, but it's still around!")
     }
     
-    private class ProcessSpy {
-        var onStarted: (() -> Void)?
+    private actor ProcessSpy {
         private var continuation: CheckedContinuation<Int, Error>?
         
         func testAsyncFunction() async throws -> Int {
-            let onStoreContinuation: (CheckedContinuation<Int, Error>) -> Void = { [weak self] continuation in
-                self?.continuation = continuation
-            }
-            
             return try await withCheckedThrowingContinuation { continuation in
-                onStoreContinuation(continuation)
-                onStarted?()
+                print("async operation started")
+                self.continuation = continuation
             }
         }
     }
